@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Missed-Call Text-Back — Cinema Edition</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Roboto,sans-serif; }
+  body {
+    background: radial-gradient(ellipse at 50% 0%, #1a0a2e 0%, #0a0a12 60%, #050508 100%);
+    color:#e8e8f0; min-height:100vh; overflow-x:hidden;
+    perspective:1200px;
+  }
+  .stage {
+    transform-style:preserve-3d;
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    padding:30px 16px 60px;
+  }
+  .screen-frame {
+    transform:rotateX(4deg) translateZ(40px);
+    width:100%; max-width:520px;
+    background:linear-gradient(160deg,#1c1230 0%,#120a22 100%);
+    border:1px solid rgba(255,106,0,.35);
+    border-radius:20px;
+    box-shadow:
+      0 0 0 1px rgba(255,106,0,.15),
+      0 25px 80px rgba(0,0,0,.7),
+      0 0 120px rgba(255,106,0,.12),
+      inset 0 1px 0 rgba(255,255,255,.06);
+    padding:34px 30px 30px;
+    position:relative;
+    overflow:hidden;
+  }
+  .screen-frame::before {
+    content:''; position:absolute; top:0; left:-100%; width:60%; height:100%;
+    background:linear-gradient(90deg,transparent,rgba(255,106,0,.07),transparent);
+    animation:sweep 4s infinite;
+  }
+  @keyframes sweep { 0%{left:-100%} 100%{left:200%} }
+  .badge {
+    display:inline-block; font-size:10px; letter-spacing:3px; text-transform:uppercase;
+    color:#ff6a00; border:1px solid rgba(255,106,0,.4); border-radius:20px;
+    padding:4px 14px; margin-bottom:14px;
+    box-shadow:0 0 16px rgba(255,106,0,.25);
+  }
+  h1 {
+    font-size:26px; font-weight:800; line-height:1.15; margin-bottom:6px;
+    background:linear-gradient(90deg,#fff 0%,#ffb070 50%,#ff6a00 100%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+    text-shadow:0 0 40px rgba(255,106,0,.3);
+  }
+  .sub { color:#8a8aa0; font-size:13.5px; margin-bottom:26px; }
+  label { display:block; font-size:11px; text-transform:uppercase; letter-spacing:2px; color:#8a8aa0; margin-bottom:6px; }
+  input, textarea {
+    width:100%; background:rgba(8,6,16,.85); border:1px solid #2e2540; border-radius:10px;
+    padding:12px 14px; color:#e8e8f0; font-size:15px; margin-bottom:16px; outline:none;
+    transition:border .2s, box-shadow .2s;
+  }
+  input:focus, textarea:focus {
+    border-color:#ff6a00; box-shadow:0 0 0 3px rgba(255,106,0,.15);
+  }
+  textarea { min-height:100px; resize:vertical; }
+  .row { display:flex; gap:10px; }
+  .row > div { flex:1; }
+  .btn {
+    width:100%; border:none; border-radius:12px; padding:15px; color:#fff; font-size:16px;
+    font-weight:800; cursor:pointer; letter-spacing:.5px;
+    background:linear-gradient(135deg,#ff6a00 0%,#ff9a00 55%,#ffc14d 100%);
+    box-shadow:0 10px 30px rgba(255,106,0,.4), inset 0 1px 0 rgba(255,255,255,.3);
+    transition:transform .15s, box-shadow .15s;
+    position:relative; overflow:hidden;
+  }
+  .btn::after {
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.25) 50%,transparent 60%);
+    transform:translateX(-120%); transition:transform .5s;
+  }
+  .btn:hover::after { transform:translateX(120%); }
+  .btn:hover { transform:translateY(-2px); box-shadow:0 14px 40px rgba(255,106,0,.55); }
+  .btn:active { transform:translateY(0); }
+  .btn:disabled { opacity:.45; cursor:not-allowed; transform:none; box-shadow:none; }
+  .preview-box {
+    margin-top:8px; background:rgba(8,6,16,.7); border:1px solid #2e2540; border-radius:10px;
+    padding:14px; font-size:14px; line-height:1.55; color:#c8c8d8; white-space:pre-wrap;
+    min-height:70px;
+  }
+  .preview-label { font-size:10px; text-transform:uppercase; letter-spacing:2px; color:#ff6a00; margin-bottom:6px; }
+  .status { margin-top:14px; font-size:13px; min-height:20px; font-weight:600; }
+  .status.ok { color:#3ddc97; text-shadow:0 0 12px rgba(61,220,151,.4); }
+  .status.err { color:#ff4d6d; }
+  .cc { background:#1a1428; border:1px solid #2e2540; border-radius:10px; padding:12px 10px; color:#8a8aa0; font-size:15px; white-space:nowrap; display:flex; align-items:center; }
+  .tabs { display:flex; gap:0; margin-bottom:22px; border-bottom:1px solid #2e2540; }
+  .tab {
+    flex:1; text-align:center; padding:10px; font-size:13px; font-weight:700; letter-spacing:1px;
+    text-transform:uppercase; color:#6a6a80; cursor:pointer; border-bottom:2px solid transparent;
+    transition:color .2s, border-color .2s; background:none; border-top:none; border-left:none; border-right:none;
+  }
+  .tab.active { color:#ff6a00; border-bottom-color:#ff6a00; }
+  .panel { display:none; }
+  .panel.active { display:block; animation:fadein .3s; }
+  @keyframes fadein { from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none} }
+  .log-item {
+    background:rgba(8,6,16,.7); border:1px solid #2e2540; border-radius:10px; padding:12px 14px;
+    margin-bottom:10px; font-size:13px; line-height:1.5;
+  }
+  .log-item .num { color:#ff9a00; font-weight:700; }
+  .log-item .time { color:#6a6a80; font-size:11px; float:right; }
+  .log-item .msg { color:#a8a8c0; margin-top:4px; }
+  .empty-log { color:#5a5a70; font-size:13px; text-align:center; padding:30px 0; }
+  .hint { font-size:11.5px; color:#5a5a70; margin-top:22px; line-height:1.7; text-align:center; }
+  .marquee-wrap { width:100%; overflow:hidden; margin-bottom:18px; border-radius:6px; background:rgba(255,106,0,.06); border:1px solid rgba(255,106,0,.15); }
+  .marquee { white-space:nowrap; animation:scroll 18s linear infinite; font-size:11px; letter-spacing:3px; text-transform:uppercase; color:#ff6a00; padding:6px 0; }
+  @keyframes scroll { from{transform:translateX(100%)} to{transform:translateX(-100%)} }
+  .glow-orb { position:fixed; border-radius:50%; filter:blur(80px); z-index:-1; pointer-events:none; }
+  .orb1 { width:400px; height:400px; background:rgba(255,106,0,.08); top:-100px; left:-100px; }
+  .orb2 { width:350px; height:350px; background:rgba(120,40,255,.07); bottom:-80px; right:-80px; }
+</style>
+</head>
+<body>
+<div class="glow-orb orb1"></div>
+<div class="glow-orb orb2"></div>
+<div class="stage">
+  <div class="screen-frame">
+    <div class="marquee-wrap"><div class="marquee">★ Never Miss Another Roofing Lead ★ Missed-Call Text-Back ★ From Your Own Number ★</div></div>
+    <div class="badge">Cinema Edition — Demo</div>
+    <h1>Missed-Call<br>Text-Back</h1>
+    <div class="sub">Type it. Send it. Lead stays warm. Built for American New Again Metal Roofing.</div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="showTab(0)">Send</button>
+      <button class="tab" onclick="showTab(1)">Call Log</button>
+    </div>
+
+    <div class="panel active" id="panel0">
+      <label>Business name (signs the text)</label>
+      <input id="biz" type="text" placeholder="American New Again Metal Roofing" value="American New Again Metal Roofing">
+
+      <label>Customer phone number</label>
+      <div class="row">
+        <div class="cc">+1</div>
+        <div style="flex:1"><input id="phone" type="tel" placeholder="(555) 555-0123" inputmode="tel"></div>
+      </div>
+
+      <label>Message</label>
+      <textarea id="msg" placeholder="Sorry we missed your call — we're on a roof right now. Text us what you need and we'll get right back."></textarea>
+
+      <button class="btn" id="sendBtn" onclick="sendText()">Send Text-Back</button>
+
+      <div class="preview-label" style="margin-top:22px">What the customer sees</div>
+      <div class="preview-box" id="preview">Sorry we missed your call — we're on a roof right now. Text us what you need and we'll get right back.
+
+— American New Again Metal Roofing</div>
+      <div class="status" id="status"></div>
+    </div>
+
+    <div class="panel" id="panel1">
+      <div id="log"></div>
+    </div>
+
+    <div class="hint">Demo mode: sends log to console. Swap sendText() for Twilio or your Android automation to go live. Pitch line: "Your phone texts them back in seconds — from your own number, no Twilio, no approval."</div>
+  </div>
+</div>
+<script>
+const phoneEl = document.getElementById('phone);
+const msgEl = document.getElementById('msg);
+const bizEl = document.getElementById('biz);
+const previewEl = document.getElementById('preview);
+const statusEl = document.getElementById('status);
+const btn = document.getElementById('sendBtn);
+const logEl = document.getElementById('log);
+let log = [];
+
+function updatePreview() {
+  const m = msgEl.value.trim() || '(your message here)';
+  const b = bizEl.value.trim();
+  previewEl.textContent = m + (b ? '\n\n— ' + b : '');
+}
+msgEl.addEventListener('input', updatePreview);
+bizEl.addEventListener('input', updatePreview);
+updatePreview();
+
+function showTab(i) {
+  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('active',j===i));
+  document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('active',j===i));
+  if (i===1) renderLog();
+}
+
+function renderLog() {
+  if (!log.length) { logEl.innerHTML = '<div class="empty-log">No text-backs sent yet.<br>Send one from the Send tab.</div>'; return; }
+  logEl.innerHTML = log.slice().reverse().map(e =>
+    '<div class="log-item"><span class="time">' + e.time + '</span><div class="num">+1 ' + e.phone + '</div><div class="msg">' + e.msg.replace(/\n/g,'<br>') + '</div></div>'
+  ).join('');
+}
+
+function sendText() {
+  const phone = phoneEl.value.replace(/\D/g,');
+  const msg = msgEl.value.trim();
+  const biz = bizEl.value.trim();
+  statusEl.textContent = ''; statusEl.className = 'status';
+  if (phone.length < 10) { statusEl.textContent = 'Enter a valid 10-digit number.'; statusEl.classList.add('err'); return; }
+  if (!msg) { statusEl.textContent = 'Type a message first.'; statusEl.classList.add('err'); return; }
+  btn.disabled = true; btn.textContent = 'Sending...';
+  setTimeout(() => {
+    const entry = { phone: phone.replace(/(\d{3})(\d{3})(\d{4})/,'$1-$2-$3'), msg: msg + (biz ? '\n\n— ' + biz : ''), time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) };
+    log.push(entry);
+    console.log('TEXT-BACK SENT', { to: '+1' + phone, message: entry.msg, at: new Date().toISOString() });
+    statusEl.textContent = 'Sent to +1 ' + entry.phone + ' ✓';
+    statusEl.classList.add('ok);
+    btn.disabled = false; btn.textContent = 'Send Text-Back';
+    renderLog();
+  }, 900);
+}
+</script>
+</body>
+</html>
